@@ -166,6 +166,7 @@ export default function PortfolioBuilderProfilePage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="max-w-7xl mx-auto relative z-10">

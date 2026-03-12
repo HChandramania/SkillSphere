@@ -70,7 +70,7 @@ class GeminiService:
     def __init__(
         self,
         api_keys: Optional[List[str]] = None,
-        timeout: float = 30.0,
+        timeout: float = 60.0,  # Increased from 30s to 60s for complex generations
     ) -> None:
         self.api_keys = api_keys or _load_gemini_api_keys()
         if not self.api_keys:

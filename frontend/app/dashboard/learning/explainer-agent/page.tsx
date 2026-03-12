@@ -753,6 +753,7 @@ function ExplainerPageContent() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="mx-auto max-w-7xl space-y-6 relative z-10">

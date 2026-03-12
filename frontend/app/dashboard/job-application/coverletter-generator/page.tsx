@@ -399,6 +399,7 @@ Nice to have:
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="mx-auto max-w-7xl relative z-10">

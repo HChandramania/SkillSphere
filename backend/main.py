@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from logger import get_logger
+from database import create_indexes
 from auth.router import router as auth_router
 from user_profile.routes import router as profile_router
 from ai_resume_builder.routes import router as ai_resume_router
@@ -28,6 +29,13 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
     # Startup
     logger.info("Starting SkillSphere application...")
+    
+    # Create database indexes for optimal query performance
+    try:
+        await create_indexes()
+    except Exception as exc:  # pragma: no cover
+        logger.error("Failed to create database indexes: %s", exc)
+    
     # Start background job scheduler for job scraping (LinkedIn + Tavily),
     # mirroring the behavior from HACKSYNC.
     try:

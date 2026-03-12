@@ -484,6 +484,7 @@ export default function UserProfilePage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="max-w-6xl mx-auto space-y-6 p-8 relative z-10">

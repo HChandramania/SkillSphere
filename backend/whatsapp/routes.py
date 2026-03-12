@@ -4,10 +4,9 @@ import uuid
 
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
-from pymongo import MongoClient
 
 from logger import get_logger
-from config import MONGO_URI, MONGO_DB
+from database import db as async_db
 from career_recommender.career_counselor import career_counselor
 
 
@@ -16,9 +15,7 @@ router = APIRouter(prefix="/twilio", tags=["Twilio WhatsApp"])
 
 # Reuse the same conversations collection as the Career Recommender chat,
 # so WhatsApp conversations share history and schema.
-mongo_client = MongoClient(MONGO_URI)
-db_sync = mongo_client[MONGO_DB]
-conversations_collection = db_sync["career_conversations"]
+conversations_collection = async_db["career_conversations"]
 
 
 @router.post("/whatsapp-career")
@@ -46,7 +43,7 @@ async def whatsapp_career_bot(request: Request) -> Response:
     user_id = from_number or "whatsapp-anonymous"
 
     # Fetch or create a dedicated WhatsApp conversation for this number
-    conversation_doc = conversations_collection.find_one(
+    conversation_doc = await conversations_collection.find_one(
         {"user_id": user_id, "metadata.channel": "whatsapp"}
     )
 
@@ -61,7 +58,7 @@ async def whatsapp_career_bot(request: Request) -> Response:
             "updated_at": datetime.utcnow(),
             "metadata": {"channel": "whatsapp"},
         }
-        conversations_collection.insert_one(conversation_doc)
+        await conversations_collection.insert_one(conversation_doc)
         logger.info("📝 Created new WhatsApp conversation %s for %s", conversation_id, user_id)
 
     # Add the latest user message to the conversation
@@ -72,7 +69,7 @@ async def whatsapp_career_bot(request: Request) -> Response:
         "attachments": [],
     }
 
-    conversations_collection.update_one(
+    await conversations_collection.update_one(
         {"conversation_id": conversation_doc["conversation_id"]},
         {
             "$push": {"messages": user_message},
@@ -106,7 +103,7 @@ async def whatsapp_career_bot(request: Request) -> Response:
         "metadata": {},
     }
 
-    conversations_collection.update_one(
+    await conversations_collection.update_one(
         {"conversation_id": conversation_doc["conversation_id"]},
         {
             "$push": {"messages": ai_message},

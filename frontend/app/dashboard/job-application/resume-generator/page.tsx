@@ -20,6 +20,7 @@ export default function ResumeGeneratorPage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="space-y-6 relative z-10">

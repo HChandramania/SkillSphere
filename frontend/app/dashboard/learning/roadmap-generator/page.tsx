@@ -582,6 +582,7 @@ export default function RoadmapGeneratorPage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
 

@@ -1,4 +1,5 @@
 from datetime import datetime
+import asyncio
 import json
 import os
 import time
@@ -8,7 +9,6 @@ from typing import Any, Dict
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from pymongo import MongoClient
 
 from auth.router import get_current_user
 from career_recommender.career_counselor import career_counselor
@@ -29,12 +29,8 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/career", tags=["Career Recommender"])
 
 
-# Synchronous Mongo client for conversations (matches original design)
-mongo_client = MongoClient(MONGO_URI)
-db_sync = mongo_client[MONGO_DB]
-conversations_collection = db_sync["career_conversations"]
-
-# Async client reused from global `db` for user profiles
+# Use async MongoDB client for all operations
+conversations_collection = async_db["career_conversations"]
 user_profiles_collection = async_db["user_profiles"]
 
 
@@ -159,7 +155,7 @@ async def chat_message(request: ChatRequest) -> ChatResponse:
     try:
         # Get or create conversation
         if request.conversation_id:
-            conversation_doc = conversations_collection.find_one(
+            conversation_doc = await conversations_collection.find_one(
                 {"conversation_id": request.conversation_id}
             )
             if not conversation_doc:
@@ -178,7 +174,7 @@ async def chat_message(request: ChatRequest) -> ChatResponse:
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
             }
-            conversations_collection.insert_one(conversation_doc)
+            await conversations_collection.insert_one(conversation_doc)
 
         # Load user profile for context
         user_profile_doc = await user_profiles_collection.find_one(
@@ -213,7 +209,7 @@ async def chat_message(request: ChatRequest) -> ChatResponse:
             ],
         }
 
-        conversations_collection.update_one(
+        await conversations_collection.update_one(
             {"conversation_id": conversation_doc["conversation_id"]},
             {"$push": {"messages": user_message}, "$set": {"updated_at": datetime.utcnow()}},
         )
@@ -235,7 +231,7 @@ async def chat_message(request: ChatRequest) -> ChatResponse:
             "metadata": {},
         }
 
-        conversations_collection.update_one(
+        await conversations_collection.update_one(
             {"conversation_id": conversation_doc["conversation_id"]},
             {"$push": {"messages": ai_message}, "$set": {"updated_at": datetime.utcnow()}},
         )
@@ -258,7 +254,7 @@ async def chat_message_stream(request: ChatRequest) -> StreamingResponse:
         try:
             # Get or create conversation
             if request.conversation_id:
-                conversation_doc = conversations_collection.find_one(
+                conversation_doc = await conversations_collection.find_one(
                     {"conversation_id": request.conversation_id}
                 )
                 if not conversation_doc:
@@ -278,7 +274,7 @@ async def chat_message_stream(request: ChatRequest) -> StreamingResponse:
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow(),
                 }
-                conversations_collection.insert_one(conversation_doc)
+                await conversations_collection.insert_one(conversation_doc)
 
                 # Send conversation ID first
                 yield f"data: {json.dumps({'type': 'conversation_id', 'conversation_id': conversation_id})}\n\n"
@@ -318,7 +314,7 @@ async def chat_message_stream(request: ChatRequest) -> StreamingResponse:
                 ],
             }
 
-            conversations_collection.update_one(
+            await conversations_collection.update_one(
                 {"conversation_id": conversation_doc["conversation_id"]},
                 {
                     "$push": {"messages": user_message},
@@ -354,7 +350,7 @@ async def chat_message_stream(request: ChatRequest) -> StreamingResponse:
                 "metadata": {},
             }
 
-            conversations_collection.update_one(
+            await conversations_collection.update_one(
                 {"conversation_id": conversation_doc["conversation_id"]},
                 {
                     "$push": {"messages": ai_message},
@@ -457,7 +453,7 @@ async def speech_to_text(audio: UploadFile = File(...)) -> Dict[str, Any]:
                 status_code=502,
                 detail=data.get("error", "Assembly AI transcription failed"),
             )
-        time.sleep(1)
+        await asyncio.sleep(1)
 
     raise HTTPException(status_code=504, detail="Transcription timed out")
 
@@ -471,18 +467,16 @@ async def get_my_conversations(
     """
     try:
         user_id = str(current_user["_id"])
-        conversations = list(
-            conversations_collection.find(
-                {"user_id": user_id},
-                {
-                    "conversation_id": 1,
-                    "title": 1,
-                    "updated_at": 1,
-                    "created_at": 1,
-                    "_id": 0,
-                },
-            ).sort("updated_at", -1)
-        )
+        conversations = await conversations_collection.find(
+            {"user_id": user_id},
+            {
+                "conversation_id": 1,
+                "title": 1,
+                "updated_at": 1,
+                "created_at": 1,
+                "_id": 0,
+            },
+        ).sort("updated_at", -1).to_list(100)
 
         for conv in conversations:
             conv["updated_at"] = (
@@ -507,18 +501,16 @@ async def get_user_conversations(user_id: str) -> ConversationListResponse:
     Get all conversations for a user (legacy endpoint used by frontend).
     """
     try:
-        conversations = list(
-            conversations_collection.find(
-                {"user_id": user_id},
-                {
-                    "conversation_id": 1,
-                    "title": 1,
-                    "updated_at": 1,
-                    "created_at": 1,
-                    "_id": 0,
-                },
-            ).sort("updated_at", -1)
-        )
+        conversations = await conversations_collection.find(
+            {"user_id": user_id},
+            {
+                "conversation_id": 1,
+                "title": 1,
+                "updated_at": 1,
+                "created_at": 1,
+                "_id": 0,
+            },
+        ).sort("updated_at", -1).to_list(100)
 
         for conv in conversations:
             conv["updated_at"] = (
@@ -543,7 +535,7 @@ async def get_conversation(user_id: str, conversation_id: str) -> Dict[str, Any]
     Get full conversation with all messages.
     """
     try:
-        conversation = conversations_collection.find_one(
+        conversation = await conversations_collection.find_one(
             {"conversation_id": conversation_id, "user_id": user_id},
             {"_id": 0},
         )
@@ -568,7 +560,7 @@ async def delete_conversation(user_id: str, conversation_id: str) -> Dict[str, s
     Delete a conversation.
     """
     try:
-        result = conversations_collection.delete_one(
+        result = await conversations_collection.delete_one(
             {"conversation_id": conversation_id, "user_id": user_id}
         )
         if result.deleted_count == 0:

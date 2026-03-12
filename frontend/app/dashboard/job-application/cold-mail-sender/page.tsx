@@ -328,6 +328,7 @@ export default function ColdMailSenderPage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="mx-auto max-w-7xl relative z-10">

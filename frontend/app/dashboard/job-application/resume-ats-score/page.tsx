@@ -127,6 +127,7 @@ export default function ResumeAtsScorePage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="mx-auto max-w-6xl relative z-10">

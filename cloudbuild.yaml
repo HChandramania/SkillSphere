@@ -30,7 +30,11 @@ steps:
       - '--memory=2Gi'
       - '--cpu=2'
       - '--timeout=300'
-      - '--max-instances=10'
+      - '--min-instances=1'              # Keep 1 warm instance to avoid cold starts
+      - '--max-instances=20'             # Increased from 10 for better scaling
+      - '--concurrency=80'               # Limit concurrent requests per instance
+      - '--cpu-throttling'               # Throttle CPU when idle to save costs
+      - '--startup-cpu-boost'            # Faster cold starts when needed
     id: 'deploy-backend'
     waitFor: ['push-backend']
   
@@ -67,7 +71,11 @@ steps:
       - '--memory=1Gi'
       - '--cpu=1'
       - '--timeout=60'
-      - '--max-instances=10'
+      - '--min-instances=1'              # Keep 1 warm instance for fast page loads
+      - '--max-instances=20'             # Scale for traffic spikes
+      - '--concurrency=100'              # Frontend can handle more concurrent requests
+      - '--cpu-throttling'
+      - '--startup-cpu-boost'
     id: 'deploy-frontend'
     waitFor: ['push-frontend', 'deploy-backend']
 

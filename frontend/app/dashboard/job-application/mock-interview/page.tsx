@@ -141,6 +141,7 @@ export default function MockInterviewPage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="mx-auto max-w-5xl space-y-8 relative z-10">

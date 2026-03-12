@@ -328,6 +328,7 @@ export default function PptMakerPage() {
           shockStrength={5}
           resistance={750}
           returnDuration={1.5}
+          style={{}}
         />
       </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-6 relative z-10">
